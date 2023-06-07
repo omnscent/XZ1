@@ -1,55 +1,62 @@
 import torch
 import Net
-import Optim
-import numpy as np
 import train
-from d2l import torch as d2l
+import numpy as np
 from torch import nn
-from torch.nn import functional as F
-from matplotlib import pyplot as plt
-from Data_Loader import load_mnist_data, load_Fashion_mnist_data, load_CIFAR_data
+from Data_Loader import *
 
 """
 预设定参数
 """
-
-batch_size = 256
-num_epochs = 50
-lr = 0.01
-train_iter, test_iter = load_Fashion_mnist_data(batch_size, resize=224)
-# train_iter, test_iter = load_Fashion_mnist_data(batch_size, resize=32)
-loss = nn.CrossEntropyLoss(reduction="none")
+input_chann_num = 1
+output_chann_num = 10
+net = Net.Pi_model(input_chann_num,output_chann_num)
+# net = Net.ResNet18(input_chann_num,output_chann_num)
+# net = Net.cifar_shakeshake26(input_chann_num,output_chann_num)
+train_batch_size = 100
+test_batch_size = 100
+num_epochs = 300
+lr = 3e-3
+labeled_num = 100
+data_module = MNIST_dataset(train_batch_size, test_batch_size, labeled_num, resize=32)
+optimizer = torch.optim.AdamW(net.parameters(), lr=lr, betas = (0.9, 0.999))
 # device = torch.device("mps")
 device = torch.device("cuda")
-
-
-"""
-模型设置
-"""
-# net = Net.Linear_Model(784, 10)
-# net = Net.Multi_Linear_Model(1, 784, [256], 10)
-# net = Net.Multilayer_Perceptron(3, [784, 512, 256, 64, 10])
-# net = Net.LeNet()
-# net = Net.AlexNet()
-# net = Net.VGG([[1, 64], [1, 128], [2, 256], [2, 512], [2, 512]])
-net = Net.ResNet18(1, 10)
-# net = Net.HTNet(3, 10)
-
 
 """
 训练设置
 """
 
 net.to(device)
-trainer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
-
-
-# train_acu, train_loss, test_acu = net.train(
-#     train_iter, test_iter, num_epochs, lr, "default"
-# )
-train_acu, train_loss, test_acu = train.train(
-    net, train_iter, test_iter, num_epochs, loss, trainer, device, 6
+train_loss, test_acc = train.train(
+    net, data_module, train_batch_size, test_batch_size, labeled_num, optimizer, device, num_epochs, "pi", max_val=100,
 )
-print(train_acu)
-print(train_loss)
-print(test_acu)
+
+np.savetxt('Pi_train_loss.txt',train_loss)
+np.savetxt('Pi_test_acc.txt',test_acc)
+
+# train_loss, test_acc = train.train(
+#     net, data_module, train_batch_size, test_batch_size, labeled_num, optimizer, device, num_epochs, train_way="temporal",
+# )
+
+# np.savetxt('temporal_train_loss.txt',train_loss)
+# np.savetxt('temporal_test_acc.txt',test_acc)
+
+# train_loss, test_acc = train.train(
+#     net, data_module, train_batch_size, test_batch_size, labeled_num, optimizer, device, num_epochs, train_way="mean_teacher", alpha=0.999, input_chann_num=input_chann_num, teacher_model=Net.Pi_model
+# )
+
+# np.savetxt('mean_teacher_train_loss.txt',train_loss)
+# np.savetxt('mean_teacher_test_acc.txt',test_acc)
+
+# train_loss, test_acc = train.train(
+#     net, data_module, train_batch_size, test_batch_size, labeled_num, optimizer, device, num_epochs, train_way="mean_teacher", alpha=0.999, input_chann_num=input_chann_num, teacher_model=Net.cifar_shakeshake26
+# )
+
+# np.savetxt('mean_teacher_ResNet_train_loss.txt',train_loss)
+# np.savetxt('mean_teacher_ResNet_test_acc.txt',test_acc)
+
+# print(train_loss)
+# print(test_acc)
+# np.savetxt('train_loss.txt',train_loss)
+# np.savetxt('test_acc.txt',test_acc)
